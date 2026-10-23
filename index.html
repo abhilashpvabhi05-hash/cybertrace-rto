@@ -1303,3 +1303,156 @@
   </script>
 </body>
 </html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CyberTrace - Vehicle Lookup</title>
+    <style>
+        body {
+            background-color: #0d0f12;
+            color: #ffffff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+        }
+        .container {
+            background: #161b22;
+            padding: 30px;
+            border-radius: 16px;
+            box-shadow: 0 8px 24px rgba(255, 0, 55, 0.2);
+            width: 100%;
+            max-width: 450px;
+            border: 1px solid #ff2a5f;
+        }
+        h2 {
+            color: #ff2a5f;
+            text-align: center;
+            margin-bottom: 20px;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+        }
+        .input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        input {
+            flex: 1;
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid #333;
+            background: #0d0f12;
+            color: #fff;
+            font-size: 16px;
+            text-transform: uppercase;
+            text-align: center;
+        }
+        input:focus {
+            outline: none;
+            border-color: #ff2a5f;
+        }
+        button {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            background: #ff2a5f;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+        button:hover {
+            background: #e01f4f;
+        }
+        .results {
+            margin-top: 20px;
+            background: #0d0f12;
+            padding: 15px;
+            border-radius: 8px;
+            display: none;
+        }
+        .result-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #222;
+        }
+        .result-row:last-child {
+            border-bottom: none;
+        }
+        .label {
+            color: #8b949e;
+        }
+        .value {
+            font-weight: bold;
+            color: #58a6ff;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>🚘 CyberTrace RTO</h2>
+    <div class="input-group">
+        <input type="text" id="regInput" placeholder="eg: KL60X3703" maxlength="10">
+        <button onclick="searchVehicle()">SEARCH</button>
+    </div>
+
+    <div class="results" id="resultBox">
+        <div class="result-row">
+            <span class="label">Registration No:</span>
+            <span class="value" id="resNum">-</span>
+        </div>
+        <div class="result-row">
+            <span class="label">RTO Location:</span>
+            <span class="value" id="resRTO">-</span>
+        </div>
+        <div class="result-row">
+            <span class="label">Vehicle Class:</span>
+            <span class="value" id="resClass">-</span>
+        </div>
+        <div class="result-row">
+            <span class="label">Fuel Type:</span>
+            <span class="value" id="resFuel">-</span>
+        </div>
+        <div class="result-row">
+            <span class="label">Status:</span>
+            <span class="value" style="color: #3fb950;">ACTIVE</span>
+        </div>
+    </div>
+</div>
+
+<script>
+    // കേരളത്തിലെ പ്രധാന RTO കോഡുകൾ
+    const rtoData = {
+        "KL01": "Trivandrum", "KL07": "Ernakulam", "KL10": "Malappuram",
+        "KL11": "Kozhikode", "KL13": "Kannur", "KL60": "Kasaragod"
+    };
+
+    function searchVehicle() {
+        const input = document.getElementById('regInput').value.trim().toUpperCase();
+        if (input.length < 5) {
+            alert("ദയവായി കൃത്യമായ വണ്ടി നമ്പർ നൽകുക!");
+            return;
+        }
+
+        const stateCode = input.substring(0, 4); // eg: KL60
+        const rtoLocation = rtoData[stateCode] || "Kerala RTO";
+
+        // ഡാറ്റ ഇല്ലാത്തതിനാൽ ഡൈനാമിക് ആയി ഡെമോ വിവരങ്ങൾ നൽകുന്നു
+        document.getElementById('resNum').innerText = input;
+        document.getElementById('resRTO').innerText = rtoLocation;
+        document.getElementById('resClass').innerText = "Motor Cycle / Scooter";
+        document.getElementById('resFuel').innerText = "Petrol";
+
+        document.getElementById('resultBox').style.display = 'block';
+    }
+</script>
+
+</body>
+</html>
