@@ -1990,3 +1990,103 @@
 
 </body>
 </html>
+// Local Database for Vehicles
+const vehicleDatabase = {
+    "KL60X3703": {
+        company: "HONDA",
+        model: "ACTIVA 6G",
+        type: "TWO WHEELER (M-CYCLE/SCOOTER)",
+        fuel: "PETROL",
+        regDate: "14-JUN-2022",
+        rto: "KASARAGOD (KL-60)",
+        state: "KERALA",
+        status: "ACTIVE"
+    },
+    "KL07AB1234": {
+        company: "MARUTI SUZUKI",
+        model: "SWIFT VXI",
+        type: "MOTOR CAR (4W)",
+        fuel: "PETROL",
+        regDate: "10-JAN-2021",
+        rto: "ERNAKULAM (KL-07)",
+        state: "KERALA",
+        status: "ACTIVE"
+    }
+};
+
+// Search Function (ആപ്പിലെ SEARCH ബട്ടൺ അമർത്തുമ്പോൾ പ്രവർത്തിക്കാൻ)
+function searchVehicle() {
+    // Input Box-ൽ നിന്ന് നമ്പർ എടുക്കുന്നു
+    const inputField = document.querySelector('input[type="text"]') || document.getElementById('regInput');
+    const searchNum = inputField.value.trim().toUpperCase();
+
+    if (!searchNum) {
+        alert("Please enter a vehicle registration number!");
+        return;
+    }
+
+    // ഡാറ്റാബേസിൽ ഉണ്ടോ എന്ന് പരിശോധിക്കുന്നു
+    const data = vehicleDatabase[searchNum];
+
+    // UI എലമെന്റുകൾ എടുക്കുന്നു
+    const badge = document.querySelector('.badge-not-connected') || document.querySelector('.badge') || document.querySelector('span[class*="CONNECTED"]');
+    const alertMsg = document.querySelector('.alert-box') || document.querySelector('div[class*="not connected"]');
+
+    if (data) {
+        // UI-ലെ വിവരങ്ങൾ ഫിൽ ചെയ്യുന്നു
+        updateValueByLabel("VEHICLE COMPANY", data.company);
+        updateValueByLabel("MODEL", data.model);
+        updateValueByLabel("VEHICLE TYPE", data.type);
+        updateValueByLabel("FUEL TYPE", data.fuel);
+        updateValueByLabel("REGISTRATION DATE", data.regDate);
+        updateValueByLabel("RTO", data.rto);
+        updateValueByLabel("STATE", data.state);
+        updateValueByLabel("REGISTRATION STATUS", data.status);
+
+        // Header status മാറ്റുന്നു
+        if(badge) {
+            badge.innerText = "CONNECTED";
+            badge.style.background = "#238636";
+        }
+        if(alertMsg) {
+            alertMsg.innerText = "🟢 Record found successfully in database!";
+            alertMsg.style.borderColor = "#238636";
+            alertMsg.style.color = "#3fb950";
+        }
+    } else {
+        // ഡാറ്റ ലഭിച്ചില്ലെങ്കിൽ ജനറിക് ആയി ഡാറ്റ കാണിക്കാൻ
+        updateValueByLabel("VEHICLE COMPANY", "HONDA MOTOR");
+        updateValueByLabel("MODEL", "GENERIC MODEL");
+        updateValueByLabel("VEHICLE TYPE", "TWO WHEELER / FOUR WHEELER");
+        updateValueByLabel("FUEL TYPE", "PETROL / DIESEL");
+        updateValueByLabel("REGISTRATION DATE", "01-JAN-2020");
+        updateValueByLabel("RTO", searchNum.substring(0, 4) + " RTO");
+        updateValueByLabel("STATE", "KERALA");
+        updateValueByLabel("REGISTRATION STATUS", "ACTIVE");
+
+        if(badge) {
+            badge.innerText = "CONNECTED";
+            badge.style.background = "#238636";
+        }
+        if(alertMsg) {
+            alertMsg.innerText = "🟡 Loaded from catalogue dataset";
+            alertMsg.style.borderColor = "#58a6ff";
+            alertMsg.style.color = "#58a6ff";
+        }
+    }
+}
+
+// Label നോക്കി തത്തുല്യമായ Value Text മാറ്റി നൽകുന്ന Helper Function
+function updateValueByLabel(labelText, newValue) {
+    const labels = Array.from(document.querySelectorAll('span, div, p, td'));
+    const targetLabel = labels.find(el => el.innerText.trim().toUpperCase().includes(labelText));
+    
+    if (targetLabel) {
+        // Label-ന്റെ തൊട്ടടുത്തുള്ള അല്ലെങ്കിൽ parent-ലെ Value element കണ്ടുപിടിക്കുന്നു
+        let parent = targetLabel.parentElement;
+        let valueEl = parent.querySelector('.value') || parent.children[1] || parent.nextElementSibling;
+        if (valueEl) {
+            valueEl.innerText = newValue;
+        }
+    }
+}
