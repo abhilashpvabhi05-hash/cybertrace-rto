@@ -1,0 +1,1305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
+  <title>CyberTrace · Vehicle Number Lookup</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --bg-black: #080808;
+      --bg-deep: #0c0c0c;
+      --red-neon: #ff2a2a;
+      --red-glow: rgba(255, 42, 42, 0.6);
+      --red-soft: #ff5555;
+      --red-dim: #8b1a1a;
+      --text-light: #eeeeee;
+      --text-muted: #888888;
+      --border-dark: #1f1f1f;
+      --card-bg: #111111;
+      --card-bg-light: #181818;
+      --mono: 'Share Tech Mono', monospace;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg-black);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1.25rem;
+      margin: 0;
+      color: var(--text-light);
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    /* animated background grid + scanline */
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background-image: 
+        linear-gradient(rgba(255, 42, 42, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 42, 42, 0.03) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+      z-index: 0;
+      animation: gridPulse 8s infinite alternate;
+    }
+
+    @keyframes gridPulse {
+      0% { opacity: 0.4; }
+      100% { opacity: 1; }
+    }
+
+    body::after {
+      content: '';
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: repeating-linear-gradient(
+        0deg,
+        rgba(0, 0, 0, 0.15) 0px,
+        rgba(0, 0, 0, 0.15) 1px,
+        transparent 1px,
+        transparent 3px
+      );
+      pointer-events: none;
+      z-index: 1;
+      opacity: 0.3;
+      animation: scanlineMove 12s linear infinite;
+    }
+
+    @keyframes scanlineMove {
+      0% { background-position: 0 0; }
+      100% { background-position: 0 100px; }
+    }
+
+    .vehicle-card {
+      max-width: 740px;
+      width: 100%;
+      background: var(--card-bg);
+      border: 1px solid var(--border-dark);
+      border-radius: 2.5rem;
+      box-shadow: 
+        0 0 0 1px rgba(255, 42, 42, 0.08),
+        0 30px 60px -20px rgba(0, 0, 0, 0.9),
+        0 0 80px -20px rgba(255, 42, 42, 0.15);
+      padding: 2rem 2rem 2.5rem;
+      position: relative;
+      z-index: 2;
+      transition: transform 0.25s ease, box-shadow 0.4s ease;
+      animation: floatIn 0.7s cubic-bezier(0.23, 1, 0.32, 1);
+      overflow: hidden;
+    }
+
+    .vehicle-card::before {
+      content: '';
+      position: absolute;
+      inset: -1px;
+      border-radius: 2.5rem;
+      padding: 1px;
+      background: linear-gradient(135deg, rgba(255,42,42,0.25), transparent 40%, transparent 60%, rgba(255,42,42,0.2));
+      -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+      -webkit-mask-composite: xor;
+      mask-composite: exclude;
+      pointer-events: none;
+      animation: borderShift 6s linear infinite;
+      background-size: 300% 300%;
+    }
+
+    @keyframes borderShift {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+
+    @keyframes floatIn {
+      0% { opacity: 0; transform: translateY(28px) scale(0.97); }
+      100% { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    .logo-area {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .logo-icon {
+      background: linear-gradient(135deg, #1a0000, #330000);
+      color: var(--red-neon);
+      width: 48px;
+      height: 48px;
+      border-radius: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.8rem;
+      box-shadow: 
+        0 0 20px rgba(255, 42, 42, 0.25),
+        inset 0 0 12px rgba(255, 42, 42, 0.15);
+      border: 1px solid rgba(255, 42, 42, 0.35);
+      animation: iconPulse 3s infinite ease-in-out;
+    }
+
+    @keyframes iconPulse {
+      0%, 100% { box-shadow: 0 0 16px rgba(255, 42, 42, 0.2), inset 0 0 10px rgba(255,42,42,0.1); }
+      50% { box-shadow: 0 0 30px rgba(255, 42, 42, 0.45), inset 0 0 18px rgba(255,42,42,0.25); }
+    }
+
+    .logo-text h1 {
+      font-size: 1.9rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: var(--text-light);
+      line-height: 1.2;
+      text-shadow: 0 0 20px rgba(255, 42, 42, 0.15);
+    }
+
+    .logo-text p {
+      font-size: 0.9rem;
+      font-weight: 500;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-family: var(--mono);
+      letter-spacing: 0.04em;
+    }
+
+    .logo-text p i {
+      font-size: 0.7rem;
+      color: var(--red-neon);
+      text-shadow: 0 0 8px var(--red-neon);
+      animation: blink 1.5s step-end infinite;
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+
+    .input-section { margin: 2rem 0 1.5rem; }
+
+    .input-label {
+      display: block;
+      font-size: 0.85rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--red-soft);
+      margin-bottom: 0.6rem;
+      font-family: var(--mono);
+      text-shadow: 0 0 10px rgba(255, 42, 42, 0.2);
+    }
+
+    .input-label i { margin-right: 6px; color: var(--red-neon); }
+
+    .input-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.8rem;
+      align-items: stretch;
+    }
+
+    .reg-input-wrapper {
+      flex: 1;
+      min-width: 200px;
+      position: relative;
+    }
+
+    .reg-input-wrapper i {
+      position: absolute;
+      left: 1.2rem;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--red-dim);
+      font-size: 1.2rem;
+      pointer-events: none;
+      transition: color 0.25s, text-shadow 0.25s;
+    }
+
+    #regNumber {
+      width: 100%;
+      padding: 1rem 1.2rem 1rem 3rem;
+      font-size: 1.25rem;
+      font-weight: 600;
+      font-family: var(--mono);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      background: var(--bg-deep);
+      border: 1.5px solid var(--border-dark);
+      border-radius: 2rem;
+      outline: none;
+      transition: border 0.25s, box-shadow 0.25s, background 0.25s;
+      color: var(--text-light);
+      caret-color: var(--red-neon);
+      box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.6);
+    }
+
+    #regNumber:focus {
+      border-color: var(--red-neon);
+      box-shadow: 
+        0 0 0 3px rgba(255, 42, 42, 0.15),
+        0 0 25px rgba(255, 42, 42, 0.15),
+        inset 0 0 20px rgba(0, 0, 0, 0.8);
+      background: #0f0f0f;
+    }
+
+    #regNumber:focus ~ i { color: var(--red-neon); text-shadow: 0 0 10px var(--red-neon); }
+
+    #regNumber::placeholder {
+      font-weight: 400;
+      color: #444;
+      letter-spacing: 0.04em;
+      text-transform: none;
+      font-family: 'Inter', sans-serif;
+    }
+
+    .search-btn {
+      background: linear-gradient(135deg, #1a0000, #2a0000);
+      border: 1px solid rgba(255, 42, 42, 0.4);
+      color: var(--red-soft);
+      font-weight: 700;
+      font-size: 1rem;
+      padding: 0 2rem;
+      border-radius: 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.6rem;
+      cursor: pointer;
+      transition: all 0.25s ease;
+      box-shadow: 
+        0 0 18px rgba(255, 42, 42, 0.15),
+        inset 0 0 12px rgba(255, 42, 42, 0.05);
+      white-space: nowrap;
+      min-height: 58px;
+      letter-spacing: 0.06em;
+      font-family: var(--mono);
+      text-transform: uppercase;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .search-btn i {
+      font-size: 1.1rem;
+      transition: transform 0.3s;
+      color: var(--red-neon);
+      text-shadow: 0 0 10px var(--red-glow);
+    }
+
+    .search-btn::after {
+      content: '';
+      position: absolute;
+      top: 0; left: -100%;
+      width: 100%; height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255, 42, 42, 0.12), transparent);
+      transition: left 0.5s ease;
+    }
+
+    .search-btn:hover {
+      background: linear-gradient(135deg, #2a0000, #3d0000);
+      box-shadow: 
+        0 0 30px rgba(255, 42, 42, 0.35),
+        inset 0 0 20px rgba(255, 42, 42, 0.1);
+      border-color: rgba(255, 42, 42, 0.7);
+      transform: translateY(-1px);
+    }
+
+    .search-btn:hover::after { left: 100%; }
+
+    .search-btn:hover i {
+      transform: translateX(3px) scale(1.1);
+      color: #fff;
+      text-shadow: 0 0 20px var(--red-neon);
+    }
+
+    .search-btn:active { transform: scale(0.97); }
+
+    .search-btn:disabled {
+      background: #141414;
+      border-color: #222;
+      color: #444;
+      box-shadow: none;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .search-btn:disabled i { color: #444; text-shadow: none; }
+
+    .validation-message {
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: var(--red-soft);
+      margin-top: 0.6rem;
+      padding-left: 0.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      min-height: 1.4rem;
+      font-family: var(--mono);
+      text-shadow: 0 0 10px rgba(255, 42, 42, 0.15);
+    }
+
+    .validation-message i {
+      font-size: 0.8rem;
+      color: var(--red-neon);
+      animation: shake 0.3s ease;
+    }
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-3px); }
+      75% { transform: translateX(3px); }
+    }
+
+    .details-section {
+      margin-top: 2.2rem;
+      background: var(--card-bg-light);
+      border-radius: 2rem;
+      padding: 1.8rem 1.8rem 1.5rem;
+      border: 1px solid var(--border-dark);
+      box-shadow: 
+        0 15px 30px -12px rgba(0, 0, 0, 0.9),
+        inset 0 1px 0 rgba(255, 255, 255, 0.02);
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .details-section::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 2px;
+      background: linear-gradient(90deg, transparent, var(--red-neon), transparent);
+      opacity: 0.5;
+      animation: lineGlow 4s ease-in-out infinite;
+    }
+
+    @keyframes lineGlow {
+      0%, 100% { opacity: 0.3; transform: scaleX(0.8); }
+      50% { opacity: 0.8; transform: scaleX(1); }
+    }
+
+    .details-header {
+      display: flex;
+      align-items: center;
+      gap: 0.8rem;
+      margin-bottom: 1.5rem;
+      color: var(--text-light);
+    }
+
+    .details-header i {
+      font-size: 1.7rem;
+      color: var(--red-neon);
+      background: #1a0000;
+      padding: 0.6rem;
+      border-radius: 1rem;
+      border: 1px solid rgba(255, 42, 42, 0.2);
+      box-shadow: 0 0 15px rgba(255, 42, 42, 0.1);
+      text-shadow: 0 0 12px var(--red-glow);
+    }
+
+    .details-header h3 {
+      font-size: 1.3rem;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      color: var(--text-light);
+      font-family: var(--mono);
+      text-transform: uppercase;
+    }
+
+    .details-header span {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--red-soft);
+      margin-left: auto;
+      font-family: var(--mono);
+      letter-spacing: 0.08em;
+      background: #1a0000;
+      padding: 0.3rem 0.9rem;
+      border-radius: 20px;
+      border: 1px solid rgba(255, 42, 42, 0.25);
+      text-shadow: 0 0 10px rgba(255, 42, 42, 0.2);
+      animation: badgePulse 2.5s infinite;
+    }
+
+    @keyframes badgePulse {
+      0%, 100% { box-shadow: 0 0 8px rgba(255, 42, 42, 0.1); }
+      50% { box-shadow: 0 0 18px rgba(255, 42, 42, 0.3); }
+    }
+
+    .detail-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1.2rem 1.5rem;
+    }
+
+    .detail-item {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      border-bottom: 1px dashed #1f1f1f;
+      padding-bottom: 0.75rem;
+      transition: border-color 0.3s, transform 0.2s;
+    }
+
+    .detail-item:hover {
+      border-bottom-color: rgba(255, 42, 42, 0.3);
+      transform: translateX(2px);
+    }
+
+    .detail-icon {
+      width: 36px;
+      height: 36px;
+      background: #1a0000;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--red-soft);
+      font-size: 1rem;
+      flex-shrink: 0;
+      border: 1px solid rgba(255, 42, 42, 0.15);
+      box-shadow: inset 0 0 12px rgba(255, 42, 42, 0.05);
+      transition: all 0.25s;
+    }
+
+    .detail-item:hover .detail-icon {
+      color: var(--red-neon);
+      border-color: rgba(255, 42, 42, 0.4);
+      box-shadow: 0 0 15px rgba(255, 42, 42, 0.2), inset 0 0 12px rgba(255, 42, 42, 0.1);
+      text-shadow: 0 0 10px var(--red-glow);
+    }
+
+    .detail-content { flex: 1; }
+
+    .detail-label {
+      font-size: 0.65rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      margin-bottom: 0.2rem;
+      font-family: var(--mono);
+    }
+
+    .detail-value {
+      font-weight: 600;
+      font-size: 1rem;
+      color: var(--text-light);
+      line-height: 1.3;
+      word-break: break-word;
+      font-family: var(--mono);
+      letter-spacing: 0.02em;
+    }
+
+    .detail-value .placeholder {
+      color: #3a3a3a;
+      font-weight: 500;
+      font-style: italic;
+    }
+
+    .notification-banner {
+      background: linear-gradient(135deg, #1a0000, #220000);
+      border-left: 4px solid var(--red-neon);
+      border-radius: 1rem;
+      padding: 1rem 1.4rem;
+      margin-top: 1.8rem;
+      display: flex;
+      align-items: center;
+      gap: 0.8rem;
+      animation: slideUp 0.4s ease, glowPulse 3s infinite;
+      border: 1px solid rgba(255, 42, 42, 0.25);
+      border-left-width: 4px;
+      box-shadow: 0 0 30px -8px rgba(255, 42, 42, 0.2);
+    }
+
+    .notification-banner.info {
+      border-left-color: #ffaa33;
+      background: linear-gradient(135deg, #1a0f00, #221400);
+    }
+
+    .notification-banner.info i { color: #ffaa33; }
+
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(12px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes glowPulse {
+      0%, 100% { box-shadow: 0 0 20px -8px rgba(255, 42, 42, 0.15); }
+      50% { box-shadow: 0 0 40px -5px rgba(255, 42, 42, 0.35); }
+    }
+
+    .notification-banner i {
+      font-size: 1.4rem;
+      color: var(--red-neon);
+      text-shadow: 0 0 15px var(--red-glow);
+      animation: blink 1.2s step-end infinite;
+    }
+
+    .notification-banner span {
+      font-weight: 500;
+      color: #d4a0a0;
+      font-size: 0.95rem;
+      font-family: var(--mono);
+      letter-spacing: 0.03em;
+    }
+
+    .loading-dots {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.35rem;
+    }
+
+    .loading-dots span {
+      width: 7px;
+      height: 7px;
+      background: var(--red-neon);
+      border-radius: 50%;
+      display: inline-block;
+      animation: pulse 1.2s infinite ease-in-out;
+      box-shadow: 0 0 12px var(--red-glow);
+    }
+
+    .loading-dots span:nth-child(2) { animation-delay: 0.2s; }
+    .loading-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+    @keyframes pulse {
+      0%, 80%, 100% { opacity: 0.2; transform: scale(0.8); }
+      40% { opacity: 1; transform: scale(1.3); box-shadow: 0 0 20px var(--red-neon); }
+    }
+
+    .search-btn .loading-dots span {
+      background: var(--red-soft);
+      box-shadow: 0 0 15px var(--red-glow);
+    }
+
+    /* ===== VehiclesDB panel ===== */
+    .vdb-toggle {
+      background: none;
+      border: 1px dashed rgba(255, 42, 42, 0.35);
+      color: var(--red-soft);
+      font-family: var(--mono);
+      font-size: 0.8rem;
+      letter-spacing: 0.05em;
+      padding: 0.45rem 1rem;
+      border-radius: 2rem;
+      cursor: pointer;
+      margin-top: 0.9rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      transition: all 0.25s;
+      text-transform: uppercase;
+    }
+
+    .vdb-toggle:hover {
+      background: rgba(255, 42, 42, 0.08);
+      border-color: var(--red-neon);
+      color: #fff;
+      box-shadow: 0 0 18px rgba(255, 42, 42, 0.2);
+    }
+
+    .vdb-panel {
+      margin-top: 1rem;
+      background: #0d0d0d;
+      border: 1px solid var(--border-dark);
+      border-radius: 1.5rem;
+      padding: 1.2rem;
+      display: none;
+      animation: slideUp 0.3s ease;
+    }
+
+    .vdb-panel.open { display: block; }
+
+    .vdb-controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.7rem;
+      margin-bottom: 1rem;
+    }
+
+    .vdb-controls input,
+    .vdb-controls select {
+      background: var(--bg-deep);
+      border: 1px solid var(--border-dark);
+      color: var(--text-light);
+      font-family: var(--mono);
+      font-size: 0.85rem;
+      padding: 0.65rem 1rem;
+      border-radius: 1.2rem;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .vdb-controls input { flex: 1; min-width: 140px; }
+    .vdb-controls input:focus,
+    .vdb-controls select:focus {
+      border-color: var(--red-neon);
+      box-shadow: 0 0 0 2px rgba(255, 42, 42, 0.15);
+    }
+
+    .vdb-controls input::placeholder { color: #444; }
+
+    .vdb-status {
+      font-family: var(--mono);
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-bottom: 0.8rem;
+      letter-spacing: 0.03em;
+    }
+
+    .vdb-status .err { color: var(--red-soft); }
+
+    .vdb-list {
+      max-height: 280px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+      padding-right: 0.3rem;
+    }
+
+    .vdb-make-group {
+      border: 1px solid #1a1a1a;
+      border-radius: 1rem;
+      overflow: hidden;
+      background: #101010;
+    }
+
+    .vdb-make-head {
+      padding: 0.6rem 1rem;
+      font-family: var(--mono);
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--red-soft);
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      background: #150000;
+      border-bottom: 1px solid #1f1f1f;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .vdb-make-head .kind-tag {
+      margin-left: auto;
+      font-size: 0.6rem;
+      color: #666;
+      border: 1px solid #2a2a2a;
+      border-radius: 10px;
+      padding: 0.1rem 0.5rem;
+    }
+
+    .vdb-model-item {
+      padding: 0.5rem 1rem 0.5rem 1.8rem;
+      font-size: 0.85rem;
+      font-family: var(--mono);
+      color: #bbb;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+      border-bottom: 1px solid #151515;
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+
+    .vdb-model-item:last-child { border-bottom: none; }
+
+    .vdb-model-item:hover {
+      background: rgba(255, 42, 42, 0.08);
+      color: var(--red-soft);
+    }
+
+    .vdb-model-item .m-kind {
+      font-size: 0.6rem;
+      color: #555;
+      border: 1px solid #222;
+      border-radius: 8px;
+      padding: 0.05rem 0.4rem;
+      margin-left: auto;
+      text-transform: uppercase;
+    }
+
+    .vdb-empty {
+      font-family: var(--mono);
+      font-size: 0.8rem;
+      color: #555;
+      text-align: center;
+      padding: 1.2rem;
+    }
+
+    /* attribution footer */
+    .attribution-footer {
+      margin-top: 2rem;
+      padding-top: 1.2rem;
+      border-top: 1px solid var(--border-dark);
+      text-align: center;
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      color: #555;
+      letter-spacing: 0.03em;
+      line-height: 1.7;
+    }
+
+    .attribution-footer a {
+      color: var(--red-soft);
+      text-decoration: none;
+      border-bottom: 1px dotted rgba(255, 85, 85, 0.4);
+      transition: color 0.2s, text-shadow 0.2s;
+    }
+
+    .attribution-footer a:hover {
+      color: var(--red-neon);
+      text-shadow: 0 0 10px var(--red-glow);
+    }
+
+    /* scrollbar */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: #0a0a0a; }
+    ::-webkit-scrollbar-thumb { background: var(--red-dim); border-radius: 10px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--red-neon); box-shadow: 0 0 10px var(--red-glow); }
+
+    @media (max-width: 600px) {
+      .vehicle-card { padding: 1.5rem 1.25rem 2rem; border-radius: 2rem; }
+      .logo-icon { width: 42px; height: 42px; font-size: 1.5rem; }
+      .logo-text h1 { font-size: 1.6rem; }
+      .input-group { flex-direction: column; }
+      .search-btn { padding: 0.9rem 1.5rem; min-height: 54px; width: 100%; }
+      .detail-grid { grid-template-columns: 1fr; gap: 0.9rem; }
+      .details-section { padding: 1.4rem; }
+      .details-header h3 { font-size: 1.1rem; }
+      .detail-value { font-size: 0.95rem; }
+      .notification-banner { padding: 0.9rem 1rem; }
+      .details-header span { font-size: 0.65rem; padding: 0.2rem 0.6rem; }
+      .vdb-controls { flex-direction: column; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      * {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="vehicle-card" id="appCard">
+    <!-- header -->
+    <div class="logo-area">
+      <div class="logo-icon">
+        <i class="fas fa-car-side"></i>
+      </div>
+      <div class="logo-text">
+        <h1>CyberTrace</h1>
+        <p><i class="fas fa-circle"></i> RTO · INDIA <span style="color:#444; font-weight:400;">v2.0</span></p>
+      </div>
+    </div>
+
+    <!-- search area -->
+    <div class="input-section">
+      <label class="input-label" for="regNumber">
+        <i class="fas fa-id-card"></i> Vehicle registration number
+      </label>
+      <div class="input-group">
+        <div class="reg-input-wrapper">
+          <i class="fas fa-motorcycle"></i>
+          <input 
+            type="text" 
+            id="regNumber" 
+            placeholder="KL14AB1234" 
+            maxlength="10"
+            autocomplete="off"
+            spellcheck="false"
+            aria-label="Vehicle registration number"
+          >
+        </div>
+        <button class="search-btn" id="searchBtn" type="button">
+          <i class="fas fa-magnifying-glass"></i> 
+          <span id="btnText">Search</span>
+        </button>
+      </div>
+      <div class="validation-message" id="validationMsg"></div>
+
+      <!-- VehiclesDB browse toggle -->
+      <button class="vdb-toggle" id="vdbToggle" type="button">
+        <i class="fas fa-database"></i> Browse makes &amp; models (VehiclesDB)
+        <i class="fas fa-chevron-down" id="vdbChevron" style="font-size:0.7rem;"></i>
+      </button>
+
+      <!-- VehiclesDB search panel -->
+      <div class="vdb-panel" id="vdbPanel">
+        <div class="vdb-controls">
+          <input type="text" id="vdbSearchInput" placeholder="Filter makes or models…" autocomplete="off" spellcheck="false">
+          <select id="vdbKindFilter" aria-label="Filter by vehicle type">
+            <option value="">All types</option>
+            <option value="car">Car</option>
+            <option value="motorcycle">Motorcycle</option>
+            <option value="moped">Moped</option>
+            <option value="van">Van</option>
+            <option value="truck">Truck</option>
+            <option value="bus">Bus</option>
+          </select>
+        </div>
+        <div class="vdb-status" id="vdbStatus">Loading catalogue…</div>
+        <div class="vdb-list" id="vdbList"></div>
+      </div>
+    </div>
+
+    <!-- vehicle details section -->
+    <div class="details-section" id="detailsSection">
+      <div class="details-header">
+        <i class="fas fa-circle-info"></i>
+        <h3>Vehicle details</h3>
+        <span class="badge" id="detailBadge">Awaiting search</span>
+      </div>
+      <div class="detail-grid" id="detailGrid">
+        <div class="detail-item">
+          <div class="detail-icon"><i class="fas fa-hashtag"></i></div>
+          <div class="detail-content">
+            <div class="detail-label">Registration number</div>
+            <div class="detail-value" id="detReg"><span class="placeholder">—</span></div>
+          </div>
+        </div>
+        <div class="detail-item">
+          <div class="detail-icon"><i class="fas fa-building"></i></div>
+          <div class="detail-content">
+            <div class="detail-label">Vehicle company</div>
+            <div class="detail-value" id="detCompany"><span class="placeholder">—</span></div>
+          </div>
+        </div>
+        <div class="detail-item">
+          <div class="detail-icon"><i class="fas fa-car"></i></div>
+          <div class="detail-content">
+            <div class="detail-label">Model</div>
+            <div class="detail-value" id="detModel"><span class="placeholder">—</span></div>
+          </div>
+        </div>
+        <div class="detail-item">
+          <div class="detail-icon"><i class="fas fa-truck"></i></div>
+          <div class="detail-content">
+            <div class="detail-label">Vehicle type</div>
+            <div class="detail-value" id="detType"><span class="placeholder">—</span></div>
+          </div>
+        </div>
+        <div class="detail-item">
+          <div class="detail-icon"><i class="fas fa-gas-pump"></i></div>
+          <div class="detail-content">
+            <div class="detail-label">Fuel type</div>
+            <div class="detail-value" id="detFuel"><span class="placeholder">—</span></div>
+          </div>
+        </div>
+        <div class="detail-item">
+          <div class="detail-icon"><i class="fas fa-calendar-check"></i></div>
+          <div class="detail-content">
+            <div class="detail-label">Registration date</div>
+            <div class="detail-value" id="detDate"><span class="placeholder">—</span></div>
+          </div>
+        </div>
+        <div class="detail-item">
+          <div class="detail-icon"><i class="fas fa-map-pin"></i></div>
+          <div class="detail-content">
+            <div class="detail-label">RTO</div>
+            <div class="detail-value" id="detRto"><span class="placeholder">—</span></div>
+          </div>
+        </div>
+        <div class="detail-item">
+          <div class="detail-icon"><i class="fas fa-map"></i></div>
+          <div class="detail-content">
+            <div class="detail-label">State</div>
+            <div class="detail-value" id="detState"><span class="placeholder">—</span></div>
+          </div>
+        </div>
+        <div class="detail-item">
+          <div class="detail-icon"><i class="fas fa-circle-check"></i></div>
+          <div class="detail-content">
+            <div class="detail-label">Registration status</div>
+            <div class="detail-value" id="detStatus"><span class="placeholder">—</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- dynamic message container -->
+    <div id="messageContainer"></div>
+
+    <!-- attribution footer (required by CC-BY 4.0) -->
+    <div class="attribution-footer">
+      <div><i class="fas fa-database"></i> Make &amp; model catalogue loaded from the open dataset</div>
+      <div>
+        <a href="https://vehiclesdb.com" target="_blank" rel="noopener noreferrer">Vehicle data by VehiclesDB</a>
+        · CC BY 4.0
+      </div>
+      <div style="margin-top:0.3rem; font-size:0.65rem; color:#444;">
+        Make/model names are catalogue entries only — not verified registration records.
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /* ============================================================
+       Core UI logic (registration number lookup) — CyberTrace
+       ============================================================ */
+    (function() {
+      const regInput = document.getElementById('regNumber');
+      const searchBtn = document.getElementById('searchBtn');
+      const btnText = document.getElementById('btnText');
+      const validationMsg = document.getElementById('validationMsg');
+      const messageContainer = document.getElementById('messageContainer');
+      const detailBadge = document.getElementById('detailBadge');
+
+      const detReg = document.getElementById('detReg');
+      const detCompany = document.getElementById('detCompany');
+      const detModel = document.getElementById('detModel');
+      const detType = document.getElementById('detType');
+      const detFuel = document.getElementById('detFuel');
+      const detDate = document.getElementById('detDate');
+      const detRto = document.getElementById('detRto');
+      const detState = document.getElementById('detState');
+      const detStatus = document.getElementById('detStatus');
+
+      const REGEX_PATTERN = /^[A-Z]{2}[0-9]{2}[A-Z]{1,2}[0-9]{4}$/;
+
+      function resetDetailsToPlaceholder() {
+        const fields = [detReg, detCompany, detModel, detType, detFuel, detDate, detRto, detState, detStatus];
+        fields.forEach(field => {
+          if (field) field.innerHTML = '<span class="placeholder">—</span>';
+        });
+      }
+
+      function showValidationError(text) {
+        validationMsg.innerHTML = `<i class="fas fa-exclamation-circle"></i> ${text}`;
+      }
+
+      function clearValidationError() {
+        validationMsg.innerHTML = '';
+      }
+
+      function setLoading(isLoading) {
+        if (isLoading) {
+          searchBtn.disabled = true;
+          btnText.innerHTML = '<span class="loading-dots"><span></span><span></span><span></span></span>';
+        } else {
+          searchBtn.disabled = false;
+          btnText.textContent = 'Search';
+        }
+      }
+
+      function showDatabaseNotConnected(regValue) {
+        messageContainer.innerHTML = '';
+        resetDetailsToPlaceholder();
+        detailBadge.textContent = 'NOT CONNECTED';
+        detailBadge.style.color = '#ff5555';
+        if (regValue && detReg) {
+          detReg.textContent = regValue;
+        }
+        const banner = document.createElement('div');
+        banner.className = 'notification-banner';
+        banner.innerHTML = `
+          <i class="fas fa-database"></i>
+          <span>⛔ Vehicle database is not connected yet — no registration record found for this number.</span>
+        `;
+        messageContainer.appendChild(banner);
+      }
+
+      function clearMessage() {
+        messageContainer.innerHTML = '';
+      }
+
+      function handleSearch() {
+        let rawValue = regInput.value.trim().toUpperCase();
+        clearValidationError();
+        clearMessage();
+        detailBadge.textContent = 'SCANNING...';
+        detailBadge.style.color = '#ff2a2a';
+
+        if (!rawValue) {
+          showValidationError('Please enter a vehicle registration number.');
+          detailBadge.textContent = 'AWAITING SEARCH';
+          detailBadge.style.color = '#ff5555';
+          resetDetailsToPlaceholder();
+          return;
+        }
+
+        if (!REGEX_PATTERN.test(rawValue)) {
+          showValidationError('Invalid format. Use standard Indian format (e.g., KL14AB1234).');
+          detailBadge.textContent = 'INVALID FORMAT';
+          detailBadge.style.color = '#ff5555';
+          resetDetailsToPlaceholder();
+          return;
+        }
+
+        setLoading(true);
+        setTimeout(() => {
+          setLoading(false);
+          showDatabaseNotConnected(rawValue);
+        }, 700);
+      }
+
+      regInput.addEventListener('input', function() {
+        if (validationMsg.innerHTML !== '') clearValidationError();
+        if (detailBadge.textContent === 'NOT CONNECTED' || detailBadge.textContent === 'INVALID FORMAT') {
+          detailBadge.textContent = 'AWAITING SEARCH';
+          detailBadge.style.color = '#ff5555';
+        }
+      });
+
+      regInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') { e.preventDefault(); handleSearch(); }
+      });
+
+      searchBtn.addEventListener('click', handleSearch);
+      regInput.addEventListener('input', function() { this.value = this.value.toUpperCase(); });
+
+      resetDetailsToPlaceholder();
+      clearValidationError();
+      clearMessage();
+      detailBadge.textContent = 'AWAITING SEARCH';
+      detailBadge.style.color = '#ff5555';
+
+      /* expose helpers for the VehiclesDB panel to use */
+      window.CyberTraceUI = {
+        clearMessage,
+        clearValidationError,
+        detailBadge,
+        detReg, detCompany, detModel, detType, detFuel, detDate, detRto, detState, detStatus,
+        messageContainer,
+        resetDetailsToPlaceholder
+      };
+    })();
+
+    /* ============================================================
+       VehiclesDB catalogue panel
+       Fetches the free CC-BY 4.0 make/model list from jsDelivr.
+       This is a *catalogue*, not a registration register:
+       it never returns owner data, mobile numbers or plate records.
+       ============================================================ */
+    const VehiclesDBPanel = (function() {
+      const CDN_URL = 'https://cdn.jsdelivr.net/gh/vehiclesdb/vehiclesdb@latest/dist/vehicles.json';
+
+      // Minimal offline fallback so the picker still works if the CDN is blocked.
+      const FALLBACK = {
+        makes: [
+          { name: 'Maruti Suzuki', slug: 'maruti-suzuki', kinds: ['car'], models: [
+            { name: 'Alto', slug: 'alto', kind: 'car' },
+            { name: 'Swift', slug: 'swift', kind: 'car' },
+            { name: 'Baleno', slug: 'baleno', kind: 'car' }
+          ]},
+          { name: 'Hyundai', slug: 'hyundai', kinds: ['car'], models: [
+            { name: 'i10', slug: 'i10', kind: 'car' },
+            { name: 'Creta', slug: 'creta', kind: 'car' }
+          ]},
+          { name: 'Honda', slug: 'honda', kinds: ['car', 'motorcycle'], models: [
+            { name: 'City', slug: 'city', kind: 'car' },
+            { name: 'Activa', slug: 'activa', kind: 'moped' }
+          ]},
+          { name: 'Toyota', slug: 'toyota', kinds: ['car'], models: [
+            { name: 'Corolla', slug: 'corolla', kind: 'car' },
+            { name: 'Innova', slug: 'innova', kind: 'car' }
+          ]},
+          { name: 'Royal Enfield', slug: 'royal-enfield', kinds: ['motorcycle'], models: [
+            { name: 'Classic 350', slug: 'classic-350', kind: 'motorcycle' },
+            { name: 'Bullet 350', slug: 'bullet-350', kind: 'motorcycle' }
+          ]}
+        ]
+      };
+
+      let catalogue = null;      // array of makes
+      let loadError = null;
+
+      const toggleBtn = document.getElementById('vdbToggle');
+      const panel = document.getElementById('vdbPanel');
+      const chevron = document.getElementById('vdbChevron');
+      const searchInput = document.getElementById('vdbSearchInput');
+      const kindFilter = document.getElementById('vdbKindFilter');
+      const statusEl = document.getElementById('vdbStatus');
+      const listEl = document.getElementById('vdbList');
+
+      /* ---------- helpers ---------- */
+      function normalize(str) {
+        return (str || '').toLowerCase().replace(/[\s\-_]+/g, '');
+      }
+
+      function setStatus(html) {
+        statusEl.innerHTML = html;
+      }
+
+      /* ---------- rendering ---------- */
+      function renderList() {
+        if (!catalogue) return;
+
+        const q = normalize(searchInput.value);
+        const kind = kindFilter.value;
+        listEl.innerHTML = '';
+
+        let matches = 0;
+
+        catalogue.forEach(make => {
+          const makeNameNorm = normalize(make.name);
+          const makeSlugNorm = normalize(make.slug);
+          const makeMatches = q && (makeNameNorm.includes(q) || makeSlugNorm.includes(q));
+
+          // Filter models by kind and by the query.
+          const models = (make.models || []).filter(m => {
+            if (kind && m.kind !== kind) return false;
+            if (!q) return true;
+            if (makeMatches) return true;
+            return normalize(m.name).includes(q) || normalize(m.slug).includes(q);
+          });
+
+          if (!models.length) return;
+          matches += models.length;
+
+          const group = document.createElement('div');
+          group.className = 'vdb-make-group';
+
+          const head = document.createElement('div');
+          head.className = 'vdb-make-head';
+          head.innerHTML = `<i class="fas fa-industry" style="font-size:0.7rem;color:#8b1a1a;"></i> ${escapeHtml(make.name)}`;
+          if (make.kinds && make.kinds.length) {
+            const tag = document.createElement('span');
+            tag.className = 'kind-tag';
+            tag.textContent = make.kinds.join(' · ');
+            head.appendChild(tag);
+          }
+          group.appendChild(head);
+
+          models.forEach(m => {
+            const item = document.createElement('div');
+            item.className = 'vdb-model-item';
+            item.setAttribute('role', 'button');
+            item.setAttribute('tabindex', '0');
+            item.innerHTML = `<i class="fas fa-angle-right" style="color:#8b1a1a;font-size:0.7rem;"></i>
+                              <span>${escapeHtml(m.name)}</span>
+                              <span class="m-kind">${escapeHtml(m.kind || '')}</span>`;
+            const select = () => selectMakeModel(make, m);
+            item.addEventListener('click', select);
+            item.addEventListener('keypress', e => { if (e.key === 'Enter') select(); });
+            group.appendChild(item);
+          });
+
+          listEl.appendChild(group);
+        });
+
+        if (!matches) {
+          const empty = document.createElement('div');
+          empty.className = 'vdb-empty';
+          empty.innerHTML = '<i class="fas fa-magnifying-glass"></i> No matching makes or models in the catalogue.';
+          listEl.appendChild(empty);
+        }
+      }
+
+      function escapeHtml(str) {
+        return String(str == null ? '' : str)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;');
+      }
+
+      /* ---------- selection: fills the detail fields, but is explicit ---------- */
+      function selectMakeModel(make, model) {
+        const ui = window.CyberTraceUI;
+        if (!ui) return;
+
+        // Clear any previous registration message
+        ui.clearMessage();
+        ui.clearValidationError();
+        ui.resetDetailsToPlaceholder();
+
+        ui.detailBadge.textContent = 'CATALOGUE MATCH';
+        ui.detailBadge.style.color = '#ffaa33';
+
+        // Registration number field stays empty: we do NOT have a plate record.
+        ui.detReg.innerHTML = '<span class="placeholder">not provided</span>';
+        ui.detCompany.textContent = make.name;
+        ui.detModel.textContent = model.name;
+        ui.detType.textContent = model.kind || '—';
+        // Fields we cannot know from the catalogue:
+        ui.detFuel.innerHTML = '<span class="placeholder">unknown (catalogue has no fuel data)</span>';
+        ui.detDate.innerHTML = '<span class="placeholder">not a registration record</span>';
+        ui.detRto.innerHTML = '<span class="placeholder">not a registration record</span>';
+        ui.detState.innerHTML = '<span class="placeholder">not a registration record</span>';
+        ui.detStatus.innerHTML = '<span class="placeholder">not verified</span>';
+
+        // Clear, honest explanatory banner.
+        const banner = document.createElement('div');
+        banner.className = 'notification-banner info';
+        banner.innerHTML = `
+          <i class="fas fa-circle-info"></i>
+          <span>
+            This is a make/model catalogue match from the VehiclesDB open dataset — it is
+            <strong>not</strong> a verified registration record. No owner details, mobile
+            numbers or plate history are available.
+          </span>
+        `;
+        ui.messageContainer.innerHTML = '';
+        ui.messageContainer.appendChild(banner);
+
+        // Keep the panel open so the choice stays visible.
+        panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+
+      /* ---------- data loading ---------- */
+      async function loadData() {
+        setStatus('<i class="fas fa-spinner fa-spin"></i> Loading make/model catalogue from VehiclesDB…');
+        try {
+          const res = await fetch(CDN_URL, { cache: 'no-store' });
+          if (!res.ok) throw new Error('HTTP ' + res.status);
+          const data = await res.json();
+          if (!data || !Array.isArray(data.makes)) throw new Error('Unexpected payload');
+          catalogue = data.makes;
+          setStatus(
+            `<i class="fas fa-check" style="color:#ff5555;"></i> ${catalogue.length} makes loaded ` +
+            `<span style="color:#444;">· data: VehiclesDB (CC BY 4.0)</span>`
+          );
+          renderList();
+        } catch (err) {
+          loadError = err;
+          catalogue = FALLBACK.makes;
+          setStatus(
+            `<span class="err"><i class="fas fa-triangle-exclamation"></i> CDN unavailable (${escapeHtml(err.message)}) — ` +
+            `using a small offline fallback list.</span>`
+          );
+          renderList();
+        }
+      }
+
+      /* ---------- wiring ---------- */
+      toggleBtn.addEventListener('click', function() {
+        const open = panel.classList.toggle('open');
+        chevron.style.transform = open ? 'rotate(180deg)' : 'rotate(0deg)';
+        if (open && !catalogue) loadData();
+        if (open) searchInput.focus();
+      });
+
+      searchInput.addEventListener('input', renderList);
+      kindFilter.addEventListener('change', renderList);
+
+      // Kick off a background load so the panel is ready when opened.
+      loadData();
+
+      return { loadData };
+    })();
+  </script>
+</body>
+</html>
